@@ -169,10 +169,17 @@ def scan_steam(cfg):
             desc = "Steam · Installed" if show_source else "Installed"
 
             # Create searchable aliases
-            aliases = ["steam", name.lower()]
-            clean_name = re.sub(r'[^a-zA-Z0-9\s]', '', name.lower())
-            if clean_name and clean_name != name.lower():
-                aliases.append(clean_name)
+            clean_name = re.sub(r'[^a-zA-Z0-9\s]', ' ', name.lower())
+            words = clean_name.split()
+            aliases = ["steam", name.lower(), clean_name]
+            if len(words) > 1:
+                acronym = "".join(w[0] for w in words if w)
+                if len(acronym) >= 2:
+                    aliases.append(acronym)
+            if "counter" in words and "strike" in words:
+                aliases.extend(["cs", "cs2", "cs 2", "counter strike"])
+            if "call" in words and "duty" in words:
+                aliases.extend(["cod", "bo2", "t6"])
 
             games.append({
                 "id": f"apps.games.steam-{appid}",
@@ -212,10 +219,15 @@ def scan_lutris(cfg):
                 desc = f"Lutris · {runner_str}" if show_source else runner_str
                 action = launch_wrapper.replace("{slug}", slug).replace("{id}", str(gid))
 
-                aliases = ["lutris", name.lower(), slug.replace("-", " ")]
-                clean_name = re.sub(r'[^a-zA-Z0-9\s]', '', name.lower())
-                if clean_name and clean_name != name.lower():
-                    aliases.append(clean_name)
+                clean_name = re.sub(r'[^a-zA-Z0-9\s]', ' ', name.lower())
+                words = clean_name.split()
+                aliases = ["lutris", name.lower(), slug.replace("-", " "), clean_name]
+                if len(words) > 1:
+                    acronym = "".join(w[0] for w in words if w)
+                    if len(acronym) >= 2:
+                        aliases.append(acronym)
+                if "call" in words and "duty" in words:
+                    aliases.extend(["cod", "bo2", "black ops", "t6"])
 
                 games.append({
                     "id": f"apps.games.lutris-{slug}",
