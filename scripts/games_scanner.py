@@ -2,8 +2,9 @@
 """
 Omarchy Games Scanner
 Multi-source game indexing engine for Omarchy.
-Discovers Steam, Lutris, RetroArch, and custom games, and generates
-the "Games" folder entries for the Omarchy Menu.
+Discovers Steam, Lutris, RetroArch, and custom games, extracts real
+artwork/icons with generic fallback, and generates the "Games" folder
+directly on the root menu under Apps.
 """
 
 import sys
@@ -125,6 +126,86 @@ def find_steam_libraries(steam_dir_str, auto_discover=True, extra_libs=None):
 
     return sorted(list(libs), key=lambda x: str(x))
 
+def find_steam_game_icon(steam_dir_str, appid):
+    """Dynamically search for real game artwork/icon in Steam caches or system icons."""
+    steam_roots = [
+        Path(os.path.expanduser(steam_dir_str)).resolve(),
+        Path.home() / ".local" / "share" / "Steam",
+        Path.home() / ".steam" / "steam",
+        Path.home() / ".steam" / "root"
+    ]
+    for sroot in steam_roots:
+        cached_dir = sroot / "appcache" / "librarycache" / str(appid)
+        if cached_dir.is_dir():
+            # Check for small square client icon (<hash>.jpg or .png or .ico)
+            candidates = []
+            for f in cached_dir.iterdir():
+                if f.is_file() and f.suffix.lower() in (".jpg", ".png", ".ico"):
+                    # Exclude large banners and blur layers
+                    if not f.name.startswith(("header", "library", "logo")):
+                        candidates.append(f)
+            if candidates:
+                # Return the smallest icon (typically the square 32x32 client icon)
+                candidates.sort(key=lambda p: p.stat().st_size)
+                return str(candidates[0].resolve())
+
+            # Fallback within librarycache: logo.png, header.jpg, library_header.jpg
+            for alt in ("logo.png", "header.jpg", "library_header.jpg"):
+                alt_p = cached_dir / alt
+                if alt_p.is_file():
+                    return str(alt_p.resolve())
+
+        # Check in Steam games icon cache (steam/games/<hash>.ico)
+        games_ico_dir = sroot / "steam" / "games"
+        if games_ico_dir.is_dir():
+            # If there are cached icos
+            pass
+
+    # Check for installed desktop/system icons
+    for sz in ["128x128", "64x64", "48x48", "32x32", "256x256"]:
+        ico_sys = Path.home() / ".local" / "share" / "icons" / "hicolor" / sz / "apps" / f"steam_icon_{appid}.png"
+        if ico_sys.is_file():
+            return str(ico_sys.resolve())
+
+    return None
+
+def find_lutris_game_icon(slug):
+    """Dynamically search for real game artwork/icon in Lutris caches or system icons."""
+    lutris_share = Path.home() / ".local" / "share" / "lutris"
+
+    # 1. Coverart
+    for ext in (".jpg", ".png"):
+        p = lutris_share / "coverart" / f"{slug}{ext}"
+        if p.is_file():
+            return str(p.resolve())
+
+    # 2. Banners
+    for ext in (".jpg", ".png"):
+        p = lutris_share / "banners" / f"{slug}{ext}"
+        if p.is_file():
+            return str(p.resolve())
+
+    # 3. System hicolor icons
+    for sz in ["128x128", "64x64", "48x48", "32x32", "256x256"]:
+        ico_sys = Path.home() / ".local" / "share" / "icons" / "hicolor" / sz / "apps" / f"lutris_{slug}.png"
+        if ico_sys.is_file():
+            return str(ico_sys.resolve())
+
+    return None
+
+def find_retroarch_game_icon(system_name, label):
+    """Dynamically search for RetroArch boxart/thumbnail."""
+    ra_dirs = [
+        Path.home() / ".config" / "retroarch" / "thumbnails" / system_name,
+        Path.home() / ".var" / "app" / "org.libretro.RetroArch" / "config" / "retroarch" / "thumbnails" / system_name
+    ]
+    for ra_dir in ra_dirs:
+        for sub in ("Named_Boxarts", "Named_Titles", "Named_Snaps"):
+            boxart = ra_dir / sub / f"{label}.png"
+            if boxart.is_file():
+                return str(boxart.resolve())
+    return None
+
 def scan_steam(cfg):
     steam_cfg = cfg["sources"]["steam"]
     if not steam_cfg.get("enabled", True):
@@ -136,7 +217,7 @@ def scan_steam(cfg):
     extra_libs = steam_cfg.get("extra_libraries", [])
     exclude_patterns = steam_cfg.get("exclude_names", [])
     launch_wrapper = steam_cfg.get("launch_wrapper", "uwsm-app -- steam steam://rungameid/{appid}")
-    steam_icon = cfg["ui"].get("steam_icon", "󰓓")
+    generic_icon = cfg["ui"].get("steam_icon", "󰓓")
     show_source = cfg["ui"].get("show_source_in_description", True)
 
     libraries = find_steam_libraries(steam_dir, auto_discover, extra_libs)
@@ -168,6 +249,10 @@ def scan_steam(cfg):
             action = launch_wrapper.replace("{appid}", appid)
             desc = "Steam · Installed" if show_source else "Installed"
 
+            # Dynamic game icon discovery with fallback to generic
+            real_icon = find_steam_game_icon(steam_dir, appid)
+            icon = real_icon if real_icon else generic_icon
+
             # Create searchable aliases
             clean_name = re.sub(r'[^a-zA-Z0-9\s]', ' ', name.lower())
             words = clean_name.split()
@@ -182,9 +267,10 @@ def scan_steam(cfg):
                 aliases.extend(["cod", "bo2", "t6"])
 
             games.append({
-                "id": f"apps.games.steam-{appid}",
+                "id": f"games.steam-{appid}",
                 "label": name,
-                "icon": steam_icon,
+                "icon": icon,
+                "has_real_icon": bool(real_icon),
                 "description": desc,
                 "aliases": list(dict.fromkeys(aliases)),
                 "action": action,
@@ -203,7 +289,7 @@ def scan_lutris(cfg):
     games = []
     db_path = Path(os.path.expanduser(lutris_cfg.get("db_path", "~/.local/share/lutris/pga.db")))
     launch_wrapper = lutris_cfg.get("launch_wrapper", "uwsm-app -- lutris lutris:rungame/{slug}")
-    lutris_icon = cfg["ui"].get("lutris_icon", "󰊴")
+    generic_icon = cfg["ui"].get("lutris_icon", "󰊴")
     show_source = cfg["ui"].get("show_source_in_description", True)
 
     if db_path.is_file():
@@ -219,6 +305,9 @@ def scan_lutris(cfg):
                 desc = f"Lutris · {runner_str}" if show_source else runner_str
                 action = launch_wrapper.replace("{slug}", slug).replace("{id}", str(gid))
 
+                real_icon = find_lutris_game_icon(slug)
+                icon = real_icon if real_icon else generic_icon
+
                 clean_name = re.sub(r'[^a-zA-Z0-9\s]', ' ', name.lower())
                 words = clean_name.split()
                 aliases = ["lutris", name.lower(), slug.replace("-", " "), clean_name]
@@ -230,9 +319,10 @@ def scan_lutris(cfg):
                     aliases.extend(["cod", "bo2", "black ops", "t6"])
 
                 games.append({
-                    "id": f"apps.games.lutris-{slug}",
+                    "id": f"games.lutris-{slug}",
                     "label": name,
-                    "icon": lutris_icon,
+                    "icon": icon,
+                    "has_real_icon": bool(real_icon),
                     "description": desc,
                     "aliases": list(dict.fromkeys(aliases)),
                     "action": action,
@@ -254,7 +344,7 @@ def scan_retroarch(cfg):
     games = []
     playlist_dir = Path(os.path.expanduser(ra_cfg.get("playlist_dir", "~/.config/retroarch/playlists")))
     launch_wrapper = ra_cfg.get("launch_wrapper", 'uwsm-app -- retroarch -L "{core_path}" "{rom_path}"')
-    ra_icon = cfg["ui"].get("retroarch_icon", "󰊱")
+    generic_icon = cfg["ui"].get("retroarch_icon", "󰊱")
     show_source = cfg["ui"].get("show_source_in_description", True)
 
     if not playlist_dir.is_dir():
@@ -278,16 +368,20 @@ def scan_retroarch(cfg):
                         continue
 
                     slug = re.sub(r'[^a-zA-Z0-9]+', '-', label.lower()).strip("-")
-                    game_id = f"apps.games.ra-{slug}"
+                    game_id = f"games.ra-{slug}"
                     action = launch_wrapper.replace("{core_path}", core_path).replace("{rom_path}", rom_path)
                     desc = f"RetroArch · {core_name}" if show_source else core_name
+
+                    real_icon = find_retroarch_game_icon(system_name, label)
+                    icon = real_icon if real_icon else generic_icon
 
                     aliases = ["retroarch", label.lower(), system_name.lower()]
 
                     games.append({
                         "id": game_id,
                         "label": label,
-                        "icon": ra_icon,
+                        "icon": icon,
+                        "has_real_icon": bool(real_icon),
                         "description": desc,
                         "aliases": list(dict.fromkeys(aliases)),
                         "action": action,
@@ -320,9 +414,10 @@ def scan_custom(cfg):
             aliases.extend(item["aliases"])
 
         games.append({
-            "id": f"apps.games.custom-{slug}",
+            "id": f"games.custom-{slug}",
             "label": name,
             "icon": icon,
+            "has_real_icon": icon.startswith("/") or icon.startswith("file://"),
             "description": desc,
             "aliases": list(dict.fromkeys(aliases)),
             "action": action,
@@ -351,16 +446,16 @@ def generate_games_jsonc_block(cfg, games):
 
     lines = []
     lines.append(f"  {BEGIN_MARKER}")
-    lines.append("  // Games folder under Apps")
+    lines.append("  // Root Menu: Games folder (positioned directly under Apps)")
     folder_obj = {
         "icon": folder_icon,
         "label": folder_label,
         "aliases": folder_aliases
     }
-    lines.append(f'  "apps.games": {json.dumps(folder_obj, ensure_ascii=False)},')
+    lines.append(f'  "games": {json.dumps(folder_obj, ensure_ascii=False)},')
     lines.append("")
 
-    lines.append(f"  // Indexed games ({len(games)} found)")
+    lines.append(f"  // Indexed games ({len(games)} found, with dynamic game artwork)")
     for g in games:
         entry = {
             "icon": g["icon"],
@@ -380,7 +475,7 @@ def generate_games_jsonc_block(cfg, games):
             "aliases": ["rescan", "refresh", "sync-games"],
             "action": "omarchy-games sync && notify-send -i input-gaming 'Omarchy Games' 'Game library rescanned successfully!'"
         }
-        lines.append(f'  "apps.games._rescan": {json.dumps(rescan_entry, ensure_ascii=False)},')
+        lines.append(f'  "games._rescan": {json.dumps(rescan_entry, ensure_ascii=False)},')
 
     if show_config:
         config_entry = {
@@ -408,19 +503,15 @@ def update_user_menu(cfg, games):
             existing_content = ""
 
     if not existing_content.strip():
-        # New clean file
         new_content = "{\n" + block + "\n}\n"
     elif BEGIN_MARKER in existing_content and END_MARKER in existing_content:
-        # Replace between markers
         before = existing_content[:existing_content.index(BEGIN_MARKER)].rstrip()
         after = existing_content[existing_content.index(END_MARKER) + len(END_MARKER):].lstrip()
         new_content = before + "\n" + block + "\n" + after
     else:
-        # Inject before final closing brace
         last_brace = existing_content.rfind("}")
         if last_brace != -1:
             before = existing_content[:last_brace].rstrip()
-            # If before doesn't end with a comma, add one if there are non-comment tokens
             non_empty_before = re.sub(r'//.*', '', before).strip()
             if non_empty_before and non_empty_before != "{":
                 if not before.endswith(","):
@@ -456,7 +547,6 @@ def clean_user_menu():
         if BEGIN_MARKER in content and END_MARKER in content:
             before = content[:content.index(BEGIN_MARKER)].rstrip()
             after = content[content.index(END_MARKER) + len(END_MARKER):].lstrip()
-            # Clean up trailing comma if before now ends with comma and after is '}'
             clean_before = re.sub(r',\s*$', '', before)
             new_content = clean_before + "\n" + after
             with open(USER_MENU_PATH, "w", encoding="utf-8") as f:
@@ -518,18 +608,21 @@ def main():
         print("-" * 60)
         for g in games:
             src = g["source"].upper()
-            print(f"[{src:<8}] {g['label']} ({g['description']})")
+            ico_type = "REAL ART" if g["has_real_icon"] else "GENERIC"
+            print(f"[{src:<8}] {g['label']} ({g['description']}) [{ico_type}]")
         return 0
 
     if args.dry_run:
         print(f"[DRY-RUN] Scanned {len(games)} games:")
         for g in games:
-            print(f"  {g['icon']} {g['label']} [{g['source']}] -> {g['action']}")
+            ico_type = "REAL ART: " + g['icon'] if g["has_real_icon"] else "GENERIC: " + g['icon']
+            print(f"  • {g['label']} [{g['source']}] ({ico_type})")
         return 0
 
     # Default to sync
     update_user_menu(cfg, games)
-    print(f"[OK] Successfully indexed {len(games)} games into Omarchy Menu under 'Apps > Games'.")
+    real_art_count = sum(1 for g in games if g["has_real_icon"])
+    print(f"[OK] Successfully indexed {len(games)} games into Omarchy Menu under 'Games' ({real_art_count}/{len(games)} with dynamic artwork).")
     return 0
 
 if __name__ == "__main__":

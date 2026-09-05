@@ -74,7 +74,7 @@ PYEOF
 fi
 
 # 6. Perform initial games scan & update Omarchy Menu
-echo "  🔎 Scanning game libraries & generating 'Apps > Games' menu..."
+echo "  🔎 Scanning game libraries & generating 'Games' menu..."
 "$CLI_TARGET" sync
 
 # 7. Reload Omarchy shell
