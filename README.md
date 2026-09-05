@@ -1,13 +1,14 @@
 # Omarchy Games (`azterisk.games`)
 
-> Unified game library manager and launcher for the **Omarchy Desktop Shell**. Indexes games across **Steam**, **Lutris**, **RetroArch**, and custom game sources directly into a dedicated **"Games"** folder under **"Apps"** in the Omarchy Command Menu, with full search bar indexability and quick launch integration.
+> Unified game library manager and launcher for the **Omarchy Desktop Shell**. Indexes games across **Steam**, **Lutris**, **RetroArch**, and custom game sources directly into a dedicated **"Games"** folder on the root menu under **"Apps"**, with real game artwork/icons, full search bar indexability, and quick launch integration.
 
 ---
 
 ## Features
 
-- **Integrated "Games" Folder**: Adds an interactive `Games` submenu directly inside `Apps` in the Omarchy Menu (`SUPER + ALT + SPACE`).
-- **Full Search Bar Indexing**: Type any game title into the Omarchy Menu search bar ("Go..."): matches are instantly surfaced with the breadcrumb `Apps › Games` and launch immediately on Enter.
+- **Root Menu "Games" Folder**: Adds an interactive `Games` submenu directly on the main Omarchy Menu (`SUPER + ALT + SPACE`), positioned right below `Apps`!
+- **Dynamic Game Artwork**: Automatically discovers real game icons from Steam's library cache and Lutris's cover art/banners! Generic gamepad glyphs (`󰊴`) are preserved as graceful fallbacks for special cases where no artwork exists.
+- **Full Search Bar Indexing**: Type any game title into the Omarchy Menu search bar ("Go..."): matches are instantly surfaced with the breadcrumb `Games` and launch immediately on Enter.
 - **Multi-Source Detection**:
   - **Steam**: Automatic discovery of all Steam libraries (internal storage, secondary internal drives, and external removable drives like `/run/media/.../SteamLibrary`). Filters out Proton/tool runtimes while preserving all your games.
   - **Lutris**: Reads SQLite `pga.db` and YAML game definitions. Launches with `uwsm-app -- lutris lutris:rungame/<slug>`.
@@ -42,14 +43,15 @@ The installer will:
 
 ### In the Omarchy Menu
 1. Press `SUPER + ALT + SPACE` (or click the Omarchy logo in the top bar).
-2. Click **"Apps"** -> select **"Games"** to browse your full gaming library.
-3. Or simply start typing any game name (e.g. `Elden`, `Black Ops`, `Valheim`, `Castle`) into the search bar: press Enter to play!
-4. Inside the Games folder, click **"Rescan Game Libraries"** anytime you install new games to update the list instantly.
+2. The **"Games"** folder is right on the main menu, directly under **"Apps"**!
+3. Click **"Games"** to browse your full gaming library with rich artwork icons.
+4. Or simply start typing any game name (e.g. `Elden`, `Black Ops`, `Valheim`, `CS2`) into the search bar: press Enter to play!
+5. Inside the Games folder, click **"Rescan Game Libraries"** anytime you install new games to update the list instantly.
 
 ### Quick Launch Direct Shortcut (Optional)
 You can bind a direct hotkey to open the Games folder immediately in `~/.config/hypr/bindings.lua`:
 ```lua
-o.bind("SUPER", "g", "Games menu", "omarchy-menu summon apps.games")
+o.bind("SUPER", "g", "Games menu", "omarchy-menu summon games")
 ```
 
 ### CLI Commands

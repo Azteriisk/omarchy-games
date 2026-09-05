@@ -23,7 +23,7 @@ BarIconButton {
     if (button === Qt.RightButton) {
       root.popupOpen = !root.popupOpen
     } else {
-      Quickshell.execDetached("omarchy-menu", ["summon", "apps.games"])
+      Quickshell.execDetached("omarchy-menu", ["summon", "games"])
     }
   }
 
@@ -102,7 +102,7 @@ BarIconButton {
               iconText: "󰊴"
               onClicked: {
                 root.close()
-                Quickshell.execDetached("omarchy-menu", ["summon", "apps.games"])
+                Quickshell.execDetached("omarchy-menu", ["summon", "games"])
               }
             }
 
