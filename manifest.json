@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "azterisk.games",
+  "name": "Omarchy Games",
+  "version": "1.0.0",
+  "author": "Azteriisk",
+  "description": "Game launcher and library manager for Omarchy with Steam, Lutris, and RetroArch source indexing in the Apps menu and search bar.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Games Library",
+    "description": "Quick access to installed games, library status, and instant rescan",
+    "category": "Status",
+    "allowMultiple": false
+  }
+}

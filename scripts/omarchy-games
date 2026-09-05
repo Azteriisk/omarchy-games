@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# Omarchy Games CLI Controller
+# Management and launcher tool for Omarchy Games plugin
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCANNER="$SCRIPT_DIR/games_scanner.py"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/games"
+CONFIG_FILE="$CONFIG_DIR/config.json"
+DEFAULT_CONFIG="$SCRIPT_DIR/../config.default.json"
+
+ensure_config() {
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    mkdir -p "$CONFIG_DIR"
+    if [[ -f "$DEFAULT_CONFIG" ]]; then
+      cp "$DEFAULT_CONFIG" "$CONFIG_FILE"
+    fi
+  fi
+}
+
+cmd="${1:-sync}"
+
+case "$cmd" in
+  sync|scan)
+    ensure_config
+    python3 "$SCANNER" --sync
+    ;;
+
+  list)
+    ensure_config
+    python3 "$SCANNER" --list
+    ;;
+
+  sources)
+    ensure_config
+    python3 "$SCANNER" --sources
+    ;;
+
+  json)
+    ensure_config
+    python3 "$SCANNER" --json
+    ;;
+
+  config|settings)
+    ensure_config
+    EDITOR="${VISUAL:-${EDITOR:-nvim}}"
+    if ! command -v "$EDITOR" >/dev/null 2>&1; then
+      EDITOR="nano"
+    fi
+    exec "$EDITOR" "$CONFIG_FILE"
+    ;;
+
+  add-source)
+    source_type="${2:-}"
+    source_path="${3:-}"
+    if [[ -z "$source_type" || -z "$source_path" ]]; then
+      echo "Usage: omarchy-games add-source <steam|retroarch> <path>"
+      exit 1
+    fi
+    ensure_config
+    python3 - << PYEOF
+import json
+import sys
+from pathlib import Path
+
+cfg_path = Path("$CONFIG_FILE")
+try:
+    with open(cfg_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    st = "$source_type".lower()
+    sp = "$source_path"
+    if st == "steam":
+        libs = data.setdefault("sources", {}).setdefault("steam", {}).setdefault("extra_libraries", [])
+        if sp not in libs:
+            libs.append(sp)
+            print(f"Added Steam library: {sp}")
+    elif st == "retroarch":
+        data.setdefault("sources", {}).setdefault("retroarch", {})["playlist_dir"] = sp
+        print(f"Set RetroArch playlists dir: {sp}")
+    else:
+        print(f"Unknown source type: {st}")
+        sys.exit(1)
+    with open(cfg_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+    print("Configuration updated.")
+except Exception as e:
+    print(f"Error: {e}")
+    sys.exit(1)
+PYEOF
+    python3 "$SCANNER" --sync
+    ;;
+
+  launch)
+    query="${2:-}"
+    ensure_config
+    if [[ -z "$query" ]]; then
+      # If fzf available, interactive picker
+      if command -v fzf >/dev/null 2>&1; then
+        picked=$(python3 "$SCANNER" --json | jq -r '.[] | "\(.label) \t \(.action)"' | fzf --delimiter='\t' --with-nth=1 --prompt="Launch Game > ")
+        if [[ -n "$picked" ]]; then
+          action=$(echo "$picked" | awk -F'\t' '{print $2}' | xargs)
+          echo "Launching: $action"
+          eval "$action"
+        fi
+      else
+        echo "Specify a game query: omarchy-games launch <name>"
+        exit 1
+      fi
+    else
+      # Find best match
+      python3 - << PYEOF
+import json
+import sys
+import subprocess
+
+query = "$query".lower()
+raw = subprocess.check_output(["python3", "$SCANNER", "--json"], text=True)
+games = json.loads(raw)
+match = None
+for g in games:
+    if query in g["label"].lower() or any(query in a for a in g.get("aliases", [])):
+        match = g
+        break
+
+if match:
+    print(f"Launching {match['label']}...")
+    subprocess.Popen(match["action"], shell=True)
+else:
+    print(f"No game found matching '{query}'.")
+    sys.exit(1)
+PYEOF
+    fi
+    ;;
+
+  clean|uninstall-menu)
+    python3 "$SCANNER" --clean
+    ;;
+
+  -h|--help|help)
+    cat << USAGE
+Omarchy Games CLI - Manage and launch games across Steam, Lutris, RetroArch
+
+Usage:
+  omarchy-games [command]
+
+Commands:
+  sync, scan              Rescan all game sources and update the Omarchy menu
+  list                    List all discovered games and sources
+  sources                 Show detected game libraries and paths
+  launch [game-name]      Launch a game by name (or interactive with fzf)
+  config                  Open ~/.config/omarchy/games/config.json in editor
+  add-source <type> <dir> Add an extra game source directory
+  json                    Output raw JSON game list
+  help                    Show this help screen
+USAGE
+    exit 0
+    ;;
+
+  *)
+    echo "Unknown command: $cmd. Run 'omarchy-games --help' for usage."
+    exit 1
+    ;;
+esac

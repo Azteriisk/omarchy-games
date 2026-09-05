@@ -1,0 +1,54 @@
+{
+  "sources": {
+    "steam": {
+      "enabled": true,
+      "steam_dir": "~/.local/share/Steam",
+      "auto_discover_libraries": true,
+      "extra_libraries": [],
+      "filter_tools": true,
+      "exclude_names": [
+        "Steam Linux Runtime*",
+        "Proton*",
+        "Steamworks*",
+        "SteamVR*",
+        "Wallpaper Engine",
+        "Blender",
+        "Aseprite"
+      ],
+      "launch_wrapper": "uwsm-app -- steam steam://rungameid/{appid}"
+    },
+    "lutris": {
+      "enabled": true,
+      "db_path": "~/.local/share/lutris/pga.db",
+      "launch_wrapper": "uwsm-app -- lutris lutris:rungame/{slug}"
+    },
+    "retroarch": {
+      "enabled": true,
+      "playlist_dir": "~/.config/retroarch/playlists",
+      "launch_wrapper": "uwsm-app -- retroarch -L \"{core_path}\" \"{rom_path}\""
+    },
+    "custom": {
+      "enabled": true,
+      "games": []
+    }
+  },
+  "ui": {
+    "folder_label": "Games",
+    "folder_icon": "󰊴",
+    "folder_aliases": [
+      "game",
+      "games",
+      "gaming",
+      "steam",
+      "lutris",
+      "retroarch"
+    ],
+    "steam_icon": "󰓓",
+    "lutris_icon": "󰊴",
+    "retroarch_icon": "󰊱",
+    "custom_icon": "󰊴",
+    "show_rescan_action": true,
+    "show_config_action": true,
+    "show_source_in_description": true
+  }
+}
