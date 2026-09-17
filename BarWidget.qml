@@ -5,7 +5,7 @@ import qs.Ui
 
 BarIconButton {
   id: root
-  moduleName: "azterisk.games"
+  property string moduleName: "azterisk.games"
 
   readonly property var gamesService: bar?.shell?.serviceFor("azterisk.games")
 
