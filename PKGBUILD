@@ -10,7 +10,9 @@ depends=('python' 'quickshell')
 makedepends=('git')
 provides=('omarchy-plugin-games')
 conflicts=('omarchy-plugin-games')
-source=("git+https://github.com/Azteriisk/omarchy-games.git")
+
+_commit="ae31e2b649fdb9b0e65196c4cd62e7bcc18be512"
+source=("git+https://github.com/Azteriisk/omarchy-games.git#commit=${_commit}")
 md5sums=('SKIP')
 
 package() {

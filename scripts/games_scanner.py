@@ -514,8 +514,8 @@ def update_user_menu(cfg, games):
             before = existing_content[:last_brace].rstrip()
             non_empty_before = re.sub(r'//.*', '', before).strip()
             if non_empty_before and non_empty_before != "{":
-                if not before.endswith(","):
-                    before += ","
+                if not non_empty_before.endswith(","):
+                    before += "\n,"
             new_content = before + "\n" + block + "\n" + existing_content[last_brace:]
         else:
             new_content = "{\n" + block + "\n}\n"
