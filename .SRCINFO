@@ -13,7 +13,7 @@ pkgbase = omarchy-plugin-games-git
 	optdepends = libva-utils: hardware video decode verification via vainfo
 	provides = omarchy-plugin-games
 	conflicts = omarchy-plugin-games
-	source = git+https://github.com/Azteriisk/omarchy-games.git#commit=41a4d7d2832b5f76a9b317370670da1dd5023b4c
+	source = git+https://github.com/Azteriisk/omarchy-games.git#commit=880a4270e5b2d752862aed17379094bfe2f38083
 	md5sums = SKIP
 
 pkgname = omarchy-plugin-games-git
