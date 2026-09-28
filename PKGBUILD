@@ -1,6 +1,6 @@
 # Maintainer: Azteriisk <https://github.com/Azteriisk>
 pkgname=omarchy-plugin-games-git
-pkgver=1.0.0.r0
+pkgver=1.1.0.r0
 pkgrel=1
 pkgdesc="Game launcher, library manager, Active Playspace, and Controller Steward for Omarchy"
 arch=('any')
@@ -15,7 +15,7 @@ makedepends=('git')
 provides=('omarchy-plugin-games')
 conflicts=('omarchy-plugin-games')
 
-_commit="65fe6eda7536c37e8d9d173154df7ccb0ddda5f4"
+_commit="41b385226fa415771ba42c6e795dd08fddcdca5d"
 source=("git+https://github.com/Azteriisk/omarchy-games.git#commit=${_commit}")
 md5sums=('SKIP')
 

@@ -1,6 +1,6 @@
 pkgbase = omarchy-plugin-games-git
 	pkgdesc = Game launcher, library manager, Active Playspace, and Controller Steward for Omarchy
-	pkgver = 1.0.0.r0
+	pkgver = 1.1.0.r0
 	pkgrel = 1
 	url = https://github.com/Azteriisk/omarchy-games
 	arch = any
@@ -13,7 +13,7 @@ pkgbase = omarchy-plugin-games-git
 	optdepends = libva-utils: hardware video decode verification via vainfo
 	provides = omarchy-plugin-games
 	conflicts = omarchy-plugin-games
-	source = git+https://github.com/Azteriisk/omarchy-games.git#commit=65fe6eda7536c37e8d9d173154df7ccb0ddda5f4
+	source = git+https://github.com/Azteriisk/omarchy-games.git#commit=41b385226fa415771ba42c6e795dd08fddcdca5d
 	md5sums = SKIP
 
 pkgname = omarchy-plugin-games-git
