@@ -27,6 +27,24 @@
       "playlist_dir": "~/.config/retroarch/playlists",
       "launch_wrapper": "uwsm-app -- retroarch -L \"{core_path}\" \"{rom_path}\""
     },
+    "xcloud": {
+      "enabled": true,
+      "launch_wrapper": "omarchy-games stream xbox",
+      "games": [
+        {
+          "name": "Sea of Thieves",
+          "slug": "launch/sea-of-thieves/9P2N57MC619K"
+        },
+        {
+          "name": "Forza Horizon 5",
+          "slug": "launch/forza-horizon-5/9NKX70BBC2HN"
+        },
+        {
+          "name": "Halo Infinite",
+          "slug": "launch/halo-infinite/9PP5G1F0C2B6"
+        }
+      ]
+    },
     "custom": {
       "enabled": true,
       "games": []
@@ -41,11 +59,14 @@
       "gaming",
       "steam",
       "lutris",
-      "retroarch"
+      "retroarch",
+      "xcloud",
+      "xbox"
     ],
     "steam_icon": "󰓓",
     "lutris_icon": "󰊴",
     "retroarch_icon": "󰊱",
+    "xcloud_icon": "󰊴",
     "custom_icon": "󰊴",
     "show_rescan_action": true,
     "show_config_action": true,

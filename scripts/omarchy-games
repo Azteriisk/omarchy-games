@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Omarchy Games CLI Controller
-# Management and launcher tool for Omarchy Games plugin
+# Management and launcher tool for Omarchy Games plugin, Playspace, & Controller Steward
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 SCANNER="$SCRIPT_DIR/games_scanner.py"
+STEWARD="$SCRIPT_DIR/controller_steward.py"
+PLAYSPACE="$SCRIPT_DIR/playspace.py"
+STREAM_RUNNER="$SCRIPT_DIR/stream_runner.sh"
+
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/games"
 CONFIG_FILE="$CONFIG_DIR/config.json"
 DEFAULT_CONFIG="$SCRIPT_DIR/../config.default.json"
@@ -49,6 +53,29 @@ case "$cmd" in
       EDITOR="nano"
     fi
     exec "$EDITOR" "$CONFIG_FILE"
+    ;;
+
+  playspace)
+    subcmd="${2:-toggle}"
+    shift 2 || shift $#
+    python3 "$PLAYSPACE" "$subcmd" "$@"
+    ;;
+
+  controller)
+    subcmd="${2:-list}"
+    shift 2 || shift $#
+    python3 "$STEWARD" "$subcmd" "$@"
+    ;;
+
+  stream)
+    target="${2:-xbox}"
+    shift 2 || shift $#
+    if [[ "$target" == "xbox" || "$target" == "xcloud" ]]; then
+      exec bash "$STREAM_RUNNER" "$@"
+    else
+      echo "Unknown stream target: $target. Supported: xbox"
+      exit 1
+    fi
     ;;
 
   add-source)
@@ -139,12 +166,12 @@ PYEOF
 
   -h|--help|help)
     cat << USAGE
-Omarchy Games CLI - Manage and launch games across Steam, Lutris, RetroArch
+Omarchy Games CLI - Games Library, Playspace Manager, & Controller Steward
 
 Usage:
   omarchy-games [command]
 
-Commands:
+Library Commands:
   sync, scan              Rescan all game sources and update the Omarchy menu
   list                    List all discovered games and sources
   sources                 Show detected game libraries and paths
@@ -152,7 +179,22 @@ Commands:
   config                  Open ~/.config/omarchy/games/config.json in editor
   add-source <type> <dir> Add an extra game source directory
   json                    Output raw JSON game list
-  help                    Show this help screen
+
+Playspace & Game Mode Commands:
+  playspace [toggle]      Toggle Active Playspace on currently focused window
+  playspace on            Lock cursor/focus and enable gaming optimizations
+  playspace off|escape    Unbind cursor and pause playspace confinement
+  playspace status        Show current playspace status
+
+Controller Steward Commands:
+  controller [list]       Audit connected controllers and tablet devices
+  controller status       Quick status summary of primary controller
+  controller fix          Apply tablet isolation overrides for SDL games
+  controller test         Interactive real-time input tester
+
+Streaming Commands:
+  stream xbox [game-id]   Stream Xbox Cloud game with hardware decode & playspace
+
 USAGE
     exit 0
     ;;

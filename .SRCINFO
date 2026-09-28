@@ -1,0 +1,16 @@
+pkgbase = omarchy-plugin-games-git
+	pkgdesc = Game launcher and library manager for Omarchy with Steam, Lutris, and RetroArch source indexing in the Apps menu and search bar.
+	pkgver = 1.0.0.r0
+	pkgrel = 1
+	url = https://github.com/Azteriisk/omarchy-games
+	arch = any
+	license = MIT
+	makedepends = git
+	depends = python
+	depends = quickshell
+	provides = omarchy-plugin-games
+	conflicts = omarchy-plugin-games
+	source = git+https://github.com/Azteriisk/omarchy-games.git#commit=615233a54f0227ff4d5448fec7069e0d3a6c60e8
+	md5sums = SKIP
+
+pkgname = omarchy-plugin-games-git

@@ -15,13 +15,20 @@ BarIconButton {
     root.popupOpen = false
   }
 
-  active: gamesService ? gamesService.isSyncing : false
+  active: (gamesService && gamesService.playspaceActive) || (gamesService && gamesService.isSyncing)
   text: "󰊴"
-  tooltipText: "Games Library (" + (gamesService ? gamesService.gameCount : 0) + " games)\nLeft-click: Open Games Menu\nRight-click: Quick Controls & Rescan"
+  tooltipText: (gamesService && gamesService.playspaceActive ? "🎮 Playspace ACTIVE (" + gamesService.playspaceTitle + ")\n" : "") +
+               "Games Library (" + (gamesService ? gamesService.gameCount : 0) + " games)\n" +
+               "Controller: " + (gamesService && gamesService.controllerConnected ? gamesService.controllerName : "None") + "\n" +
+               "Left-click: Open Games Menu\nRight-click: Playspace & Controller Controls"
 
   onPressed: function(button) {
     if (button === Qt.RightButton) {
       root.popupOpen = !root.popupOpen
+      if (gamesService) {
+        gamesService.refreshController()
+        gamesService.refreshPlayspace()
+      }
     } else {
       Quickshell.execDetached("omarchy-menu", ["summon", "games"])
     }
@@ -35,7 +42,7 @@ BarIconButton {
     open: root.popupOpen
     margin: Style.space(12)
     padding: Style.space(20)
-    contentWidth: gamesPopup.fittedContentWidth(Style.space(340))
+    contentWidth: gamesPopup.fittedContentWidth(Style.space(360))
     contentHeight: gamesPopup.fittedContentHeight(contentWrapper.implicitHeight)
 
     Item {
@@ -49,7 +56,7 @@ BarIconButton {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        spacing: Style.space(14)
+        spacing: Style.space(12)
 
         // Header Row
         Row {
@@ -58,7 +65,7 @@ BarIconButton {
 
           Text {
             text: "󰊴"
-            color: Color.accent
+            color: gamesService && gamesService.playspaceActive ? "#52b052" : Color.accent
             font.family: Style.font.family
             font.pixelSize: Style.font.title
             anchors.verticalCenter: parent.verticalCenter
@@ -69,7 +76,7 @@ BarIconButton {
             anchors.verticalCenter: parent.verticalCenter
 
             Text {
-              text: "Games Library"
+              text: "Games & Playspace"
               color: Color.foreground
               font.family: Style.font.family
               font.pixelSize: Style.font.subtitle
@@ -77,7 +84,8 @@ BarIconButton {
             }
 
             Text {
-              text: (gamesService ? gamesService.gameCount : 0) + " games discovered across sources"
+              text: (gamesService ? gamesService.gameCount : 0) + " games · " +
+                    (gamesService && gamesService.controllerConnected ? gamesService.controllerName : "No controller")
               color: Qt.darker(Color.foreground, 1.3)
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
@@ -87,10 +95,111 @@ BarIconButton {
 
         PanelSeparator { strength: 0.2 }
 
-        // Action Buttons
+        // Section 1: Active Playspace (Game Mode)
         Column {
           width: parent.width
-          spacing: Style.space(8)
+          spacing: Style.space(6)
+
+          Row {
+            width: parent.width
+            spacing: Style.space(8)
+
+            Text {
+              text: "🎮"
+              font.pixelSize: Style.font.base
+              anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+              text: "Active Playspace"
+              color: Color.foreground
+              font.family: Style.font.family
+              font.pixelSize: Style.font.base
+              font.bold: true
+              anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Item { width: 1; height: 1; Layout.fillWidth: true }
+
+            Text {
+              text: gamesService && gamesService.playspaceActive ? "LOCKED" : "IDLE"
+              color: gamesService && gamesService.playspaceActive ? "#52b052" : Qt.darker(Color.foreground, 1.4)
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              anchors.verticalCenter: parent.verticalCenter
+            }
+          }
+
+          Text {
+            width: parent.width
+            text: gamesService && gamesService.playspaceActive ?
+                  "Bound to: " + gamesService.playspaceTitle :
+                  "Locks cursor & focus to current game. Press Super+Ctrl+G to escape."
+            color: Qt.darker(Color.foreground, 1.3)
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.Wrap
+          }
+
+          Button {
+            width: parent.width
+            text: gamesService && gamesService.playspaceActive ? "Disengage Playspace (Escape)" : "Engage Active Playspace"
+            iconText: gamesService && gamesService.playspaceActive ? "" : ""
+            onClicked: {
+              if (gamesService) gamesService.togglePlayspace()
+            }
+          }
+        }
+
+        PanelSeparator { strength: 0.2 }
+
+        // Section 2: Controller Steward
+        Column {
+          width: parent.width
+          spacing: Style.space(6)
+
+          Row {
+            width: parent.width
+            spacing: Style.space(8)
+
+            Text {
+              text: "🕹️"
+              font.pixelSize: Style.font.base
+              anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+              text: "Controller Steward"
+              color: Color.foreground
+              font.family: Style.font.family
+              font.pixelSize: Style.font.base
+              font.bold: true
+              anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Item { width: 1; height: 1; Layout.fillWidth: true }
+
+            Text {
+              text: gamesService && gamesService.controllerConnected ? "Slot 0 OK" : "Disconnected"
+              color: gamesService && gamesService.controllerConnected ? "#52b052" : "#e06c75"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              anchors.verticalCenter: parent.verticalCenter
+            }
+          }
+
+          Text {
+            width: parent.width
+            text: gamesService && gamesService.controllerConnected ?
+                  gamesService.controllerName + (gamesService.controllerSlot ? " (" + gamesService.controllerSlot + ")" : "") :
+                  "No gamepad connected. Drawing tablets isolated."
+            color: Qt.darker(Color.foreground, 1.3)
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.Wrap
+          }
 
           Row {
             width: parent.width
@@ -98,17 +207,50 @@ BarIconButton {
 
             Button {
               width: (parent.width - Style.space(8)) / 2
-              text: "Open Menu"
+              text: "Test Inputs"
               iconText: "󰊴"
+              enabled: gamesService && gamesService.controllerConnected
               onClicked: {
                 root.close()
-                Quickshell.execDetached("omarchy-menu", ["summon", "games"])
+                if (gamesService) gamesService.testController()
               }
             }
 
             Button {
               width: (parent.width - Style.space(8)) / 2
-              text: gamesService && gamesService.isSyncing ? "Syncing..." : "Rescan"
+              text: "Fix Tablet Slot"
+              iconText: ""
+              onClicked: {
+                if (gamesService) gamesService.fixController()
+              }
+            }
+          }
+        }
+
+        PanelSeparator { strength: 0.2 }
+
+        // Section 3: Xbox Streaming & Library
+        Column {
+          width: parent.width
+          spacing: Style.space(6)
+
+          Row {
+            width: parent.width
+            spacing: Style.space(8)
+
+            Button {
+              width: (parent.width - Style.space(8)) / 2
+              text: "Stream Xbox"
+              iconText: "󰊴"
+              onClicked: {
+                root.close()
+                if (gamesService) gamesService.streamXbox()
+              }
+            }
+
+            Button {
+              width: (parent.width - Style.space(8)) / 2
+              text: gamesService && gamesService.isSyncing ? "Syncing..." : "Rescan Library"
               iconText: ""
               enabled: !(gamesService && gamesService.isSyncing)
               onClicked: {
@@ -119,11 +261,11 @@ BarIconButton {
 
           Button {
             width: parent.width
-            text: "Configure Sources & Paths"
-            iconText: ""
+            text: "Open Games Menu (SUPER+ALT+SPACE)"
+            iconText: "󰍜"
             onClicked: {
               root.close()
-              Quickshell.execDetached("omarchy-games", ["config"])
+              Quickshell.execDetached("omarchy-menu", ["summon", "games"])
             }
           }
         }

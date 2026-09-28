@@ -16,6 +16,16 @@ Item {
   property string lastSyncTime: ""
   property var gamesList: []
 
+  // Controller Steward state
+  property bool controllerConnected: false
+  property string controllerName: "No controller detected"
+  property string controllerSlot: ""
+  property bool tabletConflict: false
+
+  // Playspace state
+  property bool playspaceActive: false
+  property string playspaceTitle: ""
+
   signal gamesUpdated()
 
   function sync() {
@@ -27,6 +37,38 @@ Item {
   function refreshStats() {
     if (statsProcess.running) return
     statsProcess.running = true
+  }
+
+  function refreshController() {
+    if (controllerProcess.running) return
+    controllerProcess.running = true
+  }
+
+  function refreshPlayspace() {
+    if (playspaceProcess.running) return
+    playspaceProcess.running = true
+  }
+
+  function togglePlayspace() {
+    Quickshell.execDetached("bash", ["-c", root.scriptPath + " playspace toggle"])
+    refreshTimer.restart()
+  }
+
+  function testController() {
+    Quickshell.execDetached("omarchy-launch-tui", ["omarchy-games controller test"])
+  }
+
+  function fixController() {
+    Quickshell.execDetached("bash", ["-c", root.scriptPath + " controller fix"])
+    refreshController()
+  }
+
+  function streamXbox(target) {
+    var cmd = root.scriptPath + " stream xbox"
+    if (target) {
+      cmd += " " + JSON.stringify(target)
+    }
+    Quickshell.execDetached("bash", ["-c", cmd])
   }
 
   function launch(gameNameOrId) {
@@ -62,6 +104,38 @@ Item {
     }
   }
 
+  Process {
+    id: controllerProcess
+    command: ["bash", "-c", root.scriptPath + " controller json"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try {
+          var parsed = JSON.parse(text.trim())
+          root.controllerConnected = !!parsed.connected
+          root.controllerName = parsed.primary_name || "No controller detected"
+          root.controllerSlot = parsed.primary_js || ""
+          root.tabletConflict = !!parsed.tablet_conflict
+        } catch(e) {}
+      }
+    }
+  }
+
+  Process {
+    id: playspaceProcess
+    command: ["bash", "-c", root.scriptPath + " playspace status"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try {
+          var parsed = JSON.parse(text.trim())
+          root.playspaceActive = !!parsed.active
+          root.playspaceTitle = parsed.title || ""
+        } catch(e) {}
+      }
+    }
+  }
+
   // Initial sync delayed slightly so shell boots up instantly
   Timer {
     id: startupTimer
@@ -70,15 +144,39 @@ Item {
     repeat: false
     onTriggered: {
       root.refreshStats()
-      // Initial sync
+      root.refreshController()
+      root.refreshPlayspace()
       root.sync()
     }
   }
 
-  // Periodic rescan (every 3 minutes) to pick up new Steam/Lutris installs
+  // Periodic polling for controller & playspace updates
+  Timer {
+    id: pollTimer
+    interval: 4000
+    running: true
+    repeat: true
+    onTriggered: {
+      root.refreshController()
+      root.refreshPlayspace()
+    }
+  }
+
+  // Quick refresh timer for immediate responses to toggles
+  Timer {
+    id: refreshTimer
+    interval: 600
+    repeat: false
+    onTriggered: {
+      root.refreshPlayspace()
+      root.refreshController()
+    }
+  }
+
+  // Periodic rescan (every 5 minutes) to pick up new Steam/Lutris installs
   Timer {
     id: periodicTimer
-    interval: 180000
+    interval: 300000
     running: true
     repeat: true
     onTriggered: root.sync()

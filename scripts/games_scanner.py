@@ -65,6 +65,15 @@ def load_config():
     retroarch.setdefault("playlist_dir", "~/.config/retroarch/playlists")
     retroarch.setdefault("launch_wrapper", "uwsm-app -- retroarch -L \"{core_path}\" \"{rom_path}\"")
 
+    xcloud = sources.setdefault("xcloud", {})
+    xcloud.setdefault("enabled", True)
+    xcloud.setdefault("launch_wrapper", "omarchy-games stream xbox")
+    xcloud.setdefault("games", [
+        {"name": "Sea of Thieves", "slug": "launch/sea-of-thieves/9P2N57MC619K"},
+        {"name": "Forza Horizon 5", "slug": "launch/forza-horizon-5/9NKX70BBC2HN"},
+        {"name": "Halo Infinite", "slug": "launch/halo-infinite/9PP5G1F0C2B6"}
+    ])
+
     custom = sources.setdefault("custom", {})
     custom.setdefault("enabled", True)
     custom.setdefault("games", [])
@@ -72,10 +81,11 @@ def load_config():
     ui = cfg.setdefault("ui", {})
     ui.setdefault("folder_label", "Games")
     ui.setdefault("folder_icon", "󰊴")
-    ui.setdefault("folder_aliases", ["game", "games", "gaming", "steam", "lutris", "retroarch"])
+    ui.setdefault("folder_aliases", ["game", "games", "gaming", "steam", "lutris", "retroarch", "xcloud", "xbox"])
     ui.setdefault("steam_icon", "󰓓")
     ui.setdefault("lutris_icon", "󰊴")
     ui.setdefault("retroarch_icon", "󰊱")
+    ui.setdefault("xcloud_icon", "󰊴")
     ui.setdefault("custom_icon", "󰊴")
     ui.setdefault("show_rescan_action", True)
     ui.setdefault("show_config_action", True)
@@ -427,11 +437,62 @@ def scan_custom(cfg):
 
     return games
 
+def scan_xcloud(cfg):
+    xcloud_cfg = cfg.get("sources", {}).get("xcloud", {})
+    if not xcloud_cfg.get("enabled", True):
+        return []
+
+    games = []
+    xcloud_icon = cfg.get("ui", {}).get("xcloud_icon", "󰊴")
+
+    # Root hub entry
+    games.append({
+        "id": "games.xcloud-hub",
+        "label": "Xbox Cloud Gaming",
+        "icon": xcloud_icon,
+        "has_real_icon": False,
+        "description": "Xbox Cloud · Stream Hub",
+        "aliases": ["xcloud", "xbox", "stream", "cloud gaming", "xbox cloud"],
+        "action": "omarchy-games stream xbox",
+        "source": "xcloud",
+        "raw_id": "hub"
+    })
+
+    # Individual games
+    for item in xcloud_cfg.get("games", []):
+        name = item.get("name", "").strip()
+        if not name:
+            continue
+        slug = item.get("slug", "").strip()
+        icon = item.get("icon", xcloud_icon)
+        desc = item.get("description", "Xbox Cloud · Stream")
+        aliases = ["xcloud", "xbox", name.lower()]
+        if "aliases" in item and isinstance(item["aliases"], list):
+            aliases.extend(item["aliases"])
+
+        action = f"omarchy-games stream xbox {slug}" if slug else "omarchy-games stream xbox"
+        id_slug = re.sub(r'[^a-zA-Z0-9]+', '-', name.lower()).strip("-")
+
+        games.append({
+            "id": f"games.xcloud-{id_slug}",
+            "label": name,
+            "icon": icon,
+            "has_real_icon": icon.startswith("/") or icon.startswith("file://"),
+            "description": desc,
+            "aliases": list(dict.fromkeys(aliases)),
+            "action": action,
+            "source": "xcloud",
+            "raw_id": id_slug
+        })
+
+    return games
+
 def scan_all_games(cfg):
     all_games = []
     all_games.extend(scan_steam(cfg))
     all_games.extend(scan_lutris(cfg))
     all_games.extend(scan_retroarch(cfg))
+    all_games.extend(scan_xcloud(cfg))
     all_games.extend(scan_custom(cfg))
     all_games.sort(key=lambda g: g["label"].lower())
     return all_games
