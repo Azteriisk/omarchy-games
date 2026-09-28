@@ -1,5 +1,5 @@
 pkgbase = omarchy-plugin-games-git
-	pkgdesc = Game launcher and library manager for Omarchy with Steam, Lutris, and RetroArch source indexing in the Apps menu and search bar.
+	pkgdesc = Game launcher, library manager, Active Playspace, and Controller Steward for Omarchy
 	pkgver = 1.0.0.r0
 	pkgrel = 1
 	url = https://github.com/Azteriisk/omarchy-games
@@ -7,10 +7,13 @@ pkgbase = omarchy-plugin-games-git
 	license = MIT
 	makedepends = git
 	depends = python
+	depends = python-evdev
 	depends = quickshell
+	optdepends = chromium: hardware-accelerated Xbox Cloud streaming
+	optdepends = libva-utils: hardware video decode verification via vainfo
 	provides = omarchy-plugin-games
 	conflicts = omarchy-plugin-games
-	source = git+https://github.com/Azteriisk/omarchy-games.git#commit=615233a54f0227ff4d5448fec7069e0d3a6c60e8
+	source = git+https://github.com/Azteriisk/omarchy-games.git#commit=65fe6eda7536c37e8d9d173154df7ccb0ddda5f4
 	md5sums = SKIP
 
 pkgname = omarchy-plugin-games-git
