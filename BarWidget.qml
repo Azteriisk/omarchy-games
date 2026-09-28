@@ -15,6 +15,12 @@ BarIconButton {
     root.popupOpen = false
   }
 
+  property var settings: null
+  function setting(name, fallback) {
+    var value = settings ? settings[name] : undefined
+    return value === undefined || value === null ? fallback : value
+  }
+
   readonly property bool hideWhenDisconnected: setting("hideWhenDisconnected", true) === true
 
   visible: !hideWhenDisconnected || (gamesService && (gamesService.controllerConnected || gamesService.playspaceActive || gamesService.isSyncing))
@@ -104,34 +110,40 @@ BarIconButton {
           width: parent.width
           spacing: Style.space(6)
 
-          Row {
+          Item {
             width: parent.width
-            spacing: Style.space(8)
+            height: playspaceTitleRow.implicitHeight
 
-            Text {
-              text: "🎮"
-              font.pixelSize: Style.font.base
+            Row {
+              id: playspaceTitleRow
+              anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(8)
+
+              Text {
+                text: "🎮"
+                font.pixelSize: Style.font.body
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Text {
+                text: "Active Playspace"
+                color: Color.foreground
+                font.family: Style.font.family
+                font.pixelSize: Style.font.body
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+              }
             }
 
             Text {
-              text: "Active Playspace"
-              color: Color.foreground
-              font.family: Style.font.family
-              font.pixelSize: Style.font.base
-              font.bold: true
+              anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Item { width: 1; height: 1; Layout.fillWidth: true }
-
-            Text {
               text: gamesService && gamesService.playspaceActive ? "LOCKED" : "IDLE"
               color: gamesService && gamesService.playspaceActive ? "#52b052" : Qt.darker(Color.foreground, 1.4)
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               font.bold: true
-              anchors.verticalCenter: parent.verticalCenter
             }
           }
 
@@ -163,34 +175,40 @@ BarIconButton {
           width: parent.width
           spacing: Style.space(6)
 
-          Row {
+          Item {
             width: parent.width
-            spacing: Style.space(8)
+            height: controllerTitleRow.implicitHeight
 
-            Text {
-              text: "🕹️"
-              font.pixelSize: Style.font.base
+            Row {
+              id: controllerTitleRow
+              anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(8)
+
+              Text {
+                text: "🕹️"
+                font.pixelSize: Style.font.body
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Text {
+                text: "Controller Steward"
+                color: Color.foreground
+                font.family: Style.font.family
+                font.pixelSize: Style.font.body
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+              }
             }
 
             Text {
-              text: "Controller Steward"
-              color: Color.foreground
-              font.family: Style.font.family
-              font.pixelSize: Style.font.base
-              font.bold: true
+              anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Item { width: 1; height: 1; Layout.fillWidth: true }
-
-            Text {
               text: gamesService && gamesService.controllerConnected ? "Slot 0 OK" : "Disconnected"
               color: gamesService && gamesService.controllerConnected ? "#52b052" : "#e06c75"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               font.bold: true
-              anchors.verticalCenter: parent.verticalCenter
             }
           }
 

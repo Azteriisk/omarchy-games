@@ -28,6 +28,11 @@ Item {
 
   signal gamesUpdated()
 
+  Component.onCompleted: {
+    refreshController()
+    refreshPlayspace()
+  }
+
   function sync() {
     if (syncProcess.running) return
     isSyncing = true
