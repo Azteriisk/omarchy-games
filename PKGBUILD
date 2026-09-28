@@ -15,7 +15,7 @@ makedepends=('git')
 provides=('omarchy-plugin-games')
 conflicts=('omarchy-plugin-games')
 
-_commit="2c577eabc7c1b5c572fdd725d59f94f9aa666412"
+_commit="bcdeeca78a0449bbc58ecdcb3b66c7be7cebd4ed"
 source=("git+https://github.com/Azteriisk/omarchy-games.git#commit=${_commit}")
 md5sums=('SKIP')
 
