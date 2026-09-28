@@ -204,8 +204,8 @@ BarIconButton {
             Text {
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
-              text: gamesService && gamesService.controllerConnected ? "Slot 0 OK" : "Disconnected"
-              color: gamesService && gamesService.controllerConnected ? "#52b052" : "#e06c75"
+              text: gamesService && gamesService.controllerConnected ? (gamesService.tabletConflict ? "Slot Conflict" : "Slot OK") : "Disconnected"
+              color: gamesService && gamesService.controllerConnected ? (gamesService.tabletConflict ? "#e5c07b" : "#52b052") : "#e06c75"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               font.bold: true
@@ -243,6 +243,7 @@ BarIconButton {
               text: "Fix Tablet Slot"
               iconText: ""
               onClicked: {
+                root.close()
                 if (gamesService) gamesService.fixController()
               }
             }

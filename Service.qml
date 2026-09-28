@@ -60,12 +60,12 @@ Item {
   }
 
   function testController() {
-    Quickshell.execDetached("omarchy-launch-tui", ["omarchy-games controller test"])
+    Quickshell.execDetached("omarchy-launch-tui", ["omarchy-games", "controller", "test"])
   }
 
   function fixController() {
-    Quickshell.execDetached("bash", ["-c", root.scriptPath + " controller fix"])
-    refreshController()
+    Quickshell.execDetached("omarchy-launch-tui", ["omarchy-games", "controller", "fix"])
+    refreshTimer.restart()
   }
 
   function streamXbox(target) {

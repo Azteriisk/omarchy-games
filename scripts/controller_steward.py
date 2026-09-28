@@ -72,7 +72,7 @@ def scan_devices():
                         btn_gamepad and not is_tablet
                     )
 
-                    # Look for associated jsX node
+                    # Look for associated jsX node in /dev/input
                     js_node = None
                     try:
                         ev_num = Path(path).name.replace("event", "")
@@ -80,8 +80,10 @@ def scan_devices():
                         if sys_input.exists():
                             for child in sys_input.iterdir():
                                 if child.name.startswith("js"):
-                                    js_node = child.name
-                                    break
+                                    dev_file = Path(f"/dev/input/{child.name}")
+                                    if dev_file.exists() and os.access(dev_file, os.R_OK):
+                                        js_node = child.name
+                                        break
                     except Exception:
                         pass
 
@@ -102,13 +104,31 @@ def scan_devices():
 
     return devices
 
+def is_tablet_isolated():
+    env_file = Path.home() / ".config" / "environment.d" / "60-omarchy-gamepad.conf"
+    sdl_isolated = False
+    if env_file.exists():
+        try:
+            content = env_file.read_text(encoding="utf-8")
+            if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in content and "256c" in content:
+                sdl_isolated = True
+        except Exception:
+            pass
+
+    udev_file = Path("/etc/udev/rules.d/99-omarchy-tablet-no-joystick.rules")
+    udev_active = udev_file.exists()
+    return sdl_isolated, udev_active
+
 def get_status():
     devs = scan_devices()
     gamepads = [d for d in devs if d["is_gamepad"]]
     tablets = [d for d in devs if d["is_tablet"] and d.get("js_node")]
 
     primary = gamepads[0] if gamepads else None
-    tablet_conflict = any(t.get("js_node") in ("js0", "js1", "js2") for t in tablets)
+    sdl_isolated, udev_active = is_tablet_isolated()
+
+    has_active_tablet_js = any(t.get("js_node") in ("js0", "js1", "js2") for t in tablets)
+    tablet_conflict = has_active_tablet_js and not udev_active
 
     return {
         "connected": bool(primary),
@@ -116,6 +136,7 @@ def get_status():
         "primary_node": primary["path"] if primary else None,
         "primary_js": primary["js_node"] if primary else None,
         "tablet_conflict": tablet_conflict,
+        "tablet_isolated": bool(sdl_isolated or udev_active),
         "conflict_tablets": [t["name"] for t in tablets],
         "gamepad_count": len(gamepads),
         "gamepads": gamepads
@@ -139,6 +160,8 @@ def print_list():
         for t in status["conflict_tablets"]:
             print(f"      - {t}")
         print("      Run 'omarchy-games controller fix' to isolate drawing tablets from games.")
+    elif status["tablet_isolated"]:
+        print("\n  ✓ Drawing tablets isolated (SDL / udev rules active).")
     else:
         print("\n  ✓ No joystick slot conflicts detected.")
 
@@ -148,71 +171,145 @@ def print_list():
     print("======================================================================")
 
 def apply_fix():
-    print("🔧 Applying Omarchy Controller & Tablet Isolation Fix...")
+    print("======================================================================")
+    print("  🎮 OMARCHY CONTROLLER STEWARD — TABLET ISOLATION FIX")
+    print("======================================================================")
+    print("\n[1/3] Configuring SDL gamepad isolation...")
     env_dir = Path.home() / ".config" / "environment.d"
     env_dir.mkdir(parents=True, exist_ok=True)
     env_file = env_dir / "60-omarchy-gamepad.conf"
 
-    # Known tablet devices to ignore in SDL
     content = (
         "# Omarchy Gamepad Steward\n"
         "# Automatically generated to keep drawing tablet pads from interfering with gamepads\n"
         "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x256c/0x006d,0x056a/0x037a,0x28bd/0x0042\n"
     )
-
     with open(env_file, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"  ✓ Written SDL tablet isolation overrides to {env_file}")
 
-    # Create local udev rule template
+    print("\n[2/3] Installing system udev rule for drawing tablet isolation...")
     udev_rule_content = (
-        "# Omarchy Gamepad Steward - Huion/Drawing Tablet Joystick Removal\n"
-        "# Disables ID_INPUT_JOYSTICK on tablet button pads so real controllers take js0\n"
-        'SUBSYSTEM=="input", ATTRS{idVendor}=="256c", ATTRS{idProduct}=="006d", ENV{ID_INPUT_TABLET_PAD}=="1", ENV{ID_INPUT_JOYSTICK}=""\n'
-        'SUBSYSTEM=="input", ATTRS{idVendor}=="256c", ATTRS{idProduct}=="006d", ENV{ID_INPUT_TABLET}=="1", ENV{ID_INPUT_JOYSTICK}=""\n'
+        "# Omarchy Gamepad Steward - Huion & Drawing Tablet Joystick Neutralizer\n"
+        "# Prevents drawing tablets from taking joystick slots (js0-js2) away from real controllers.\n"
+        "\n"
+        "# Huion\n"
+        'SUBSYSTEM=="input", ATTRS{idVendor}=="256c", KERNEL=="js[0-9]*", MODE="0000", ENV{ID_INPUT_JOYSTICK}="", RUN+="/usr/bin/rm -f /dev/input/%k"\n'
+        'SUBSYSTEM=="input", ATTRS{idVendor}=="256c", ENV{ID_INPUT_JOYSTICK}=="?*", ENV{ID_INPUT_JOYSTICK}=""\n'
+        "\n"
+        "# Wacom\n"
+        'SUBSYSTEM=="input", ATTRS{idVendor}=="056a", KERNEL=="js[0-9]*", MODE="0000", ENV{ID_INPUT_JOYSTICK}="", RUN+="/usr/bin/rm -f /dev/input/%k"\n'
+        'SUBSYSTEM=="input", ATTRS{idVendor}=="056a", ENV{ID_INPUT_JOYSTICK}=="?*", ENV{ID_INPUT_JOYSTICK}=""\n'
+        "\n"
+        "# XP-Pen\n"
+        'SUBSYSTEM=="input", ATTRS{idVendor}=="28bd", KERNEL=="js[0-9]*", MODE="0000", ENV{ID_INPUT_JOYSTICK}="", RUN+="/usr/bin/rm -f /dev/input/%k"\n'
+        'SUBSYSTEM=="input", ATTRS{idVendor}=="28bd", ENV{ID_INPUT_JOYSTICK}=="?*", ENV{ID_INPUT_JOYSTICK}=""\n'
     )
 
-    udev_target = Path("/etc/udev/rules.d/99-omarchy-tablet-no-joystick.rules")
-    if not udev_target.exists():
-        tmp_rule = Path.home() / ".config" / "omarchy" / "games" / "99-omarchy-tablet-no-joystick.rules"
-        tmp_rule.parent.mkdir(parents=True, exist_ok=True)
-        with open(tmp_rule, "w", encoding="utf-8") as f:
-            f.write(udev_rule_content)
-        print(f"  ℹ️  To permanently remove tablet js0-js2 at kernel level, run:")
-        print(f"      sudo cp {tmp_rule} /etc/udev/rules.d/ && sudo udevadm control --reload-rules && sudo udevadm trigger")
-    else:
-        print("  ✓ System udev rule already active at /etc/udev/rules.d/99-omarchy-tablet-no-joystick.rules")
+    staging = Path.home() / ".config" / "omarchy" / "games" / "99-omarchy-tablet-no-joystick.rules"
+    staging.parent.mkdir(parents=True, exist_ok=True)
+    staging.write_text(udev_rule_content, encoding="utf-8")
 
-    print("\n✓ Controller steward configuration updated!")
+    import subprocess
+
+    udev_target = Path("/etc/udev/rules.d/99-omarchy-tablet-no-joystick.rules")
+    if os.geteuid() == 0:
+        udev_target.write_text(udev_rule_content, encoding="utf-8")
+        subprocess.run(["udevadm", "control", "--reload-rules"], check=False)
+        subprocess.run(["udevadm", "trigger", "-s", "input"], check=False)
+        for js in Path("/dev/input").glob("js*"):
+            try:
+                out = subprocess.check_output(["udevadm", "info", str(js)], text=True, errors="replace")
+                if any(v in out for v in ["ID_VENDOR_ID=256c", "ID_VENDOR_ID=056a", "ID_VENDOR_ID=28bd"]):
+                    js.unlink(missing_ok=True)
+            except Exception:
+                pass
+        print("  ✓ System udev rule installed directly and rules reloaded.")
+    else:
+        print("  [Requesting administrator privilege via sudo to install udev rule]")
+        cmd = (
+            f"cp '{staging}' /etc/udev/rules.d/99-omarchy-tablet-no-joystick.rules && "
+            "udevadm control --reload-rules && "
+            "udevadm trigger -s input && "
+            "for js in /dev/input/js[0-9]*; do [ -e \"$js\" ] || continue; "
+            "udevadm info \"$js\" 2>/dev/null | grep -Eq 'ID_VENDOR_ID=(256c|056a|28bd)' && rm -f \"$js\" || true; done"
+        )
+        try:
+            res = subprocess.run(["sudo", "sh", "-c", cmd])
+            if res.returncode == 0:
+                print("  ✓ System udev rule installed and tablet joystick nodes neutralized.")
+            else:
+                print("  ⚠️ Sudo elevation failed or was cancelled.", file=sys.stderr)
+        except Exception as e:
+            print(f"  ⚠️ Error running sudo: {e}", file=sys.stderr)
+
+    print("\n[3/3] Verifying status...")
+    st = get_status()
+    if not st["tablet_conflict"]:
+        print("  ✓ All tablet joystick conflicts successfully resolved!")
+        if st["connected"]:
+            print(f"  ✓ Active Gamepad: {st['primary_name']} ({st['primary_js'] or st['primary_node']})")
+    else:
+        print("  ⚠️ Some tablet nodes may still be active. Replugging your controller or a reboot may be needed.")
+
+    print("\n======================================================================")
+    print("  Fix completed!")
+    print("======================================================================")
+    if sys.stdout.isatty():
+        try:
+            input("\nPress Enter to close...")
+        except Exception:
+            pass
 
 def live_test():
     evdev = get_evdev()
     if evdev is None:
-        print("Error: python-evdev is required for live testing.", file=sys.stderr)
+        print("❌ Error: python-evdev is required for live testing.", file=sys.stderr)
+        if sys.stdout.isatty():
+            input("\nPress Enter to exit...")
         sys.exit(1)
 
     status = get_status()
     if not status["connected"]:
         print("❌ No controller connected to test.", file=sys.stderr)
+        if sys.stdout.isatty():
+            input("\nPress Enter to exit...")
         sys.exit(1)
 
     node = status["primary_node"]
     name = status["primary_name"]
-    print(f"🎮 Testing {name} on {node} (Press Ctrl+C to exit)...")
-    print("Press buttons, move analog sticks, or pull triggers:\n")
+    js = status.get("primary_js")
+
+    print("======================================================================")
+    print("  🎮 OMARCHY CONTROLLER INPUT TESTER")
+    print("======================================================================")
+    print(f"  Device: {name}")
+    print(f"  Node:   {node} ({js or 'No js slot'})")
+    print("----------------------------------------------------------------------")
+    print("  Press buttons, move sticks, or pull triggers.")
+    print("  Press Ctrl+C to stop testing.\n")
 
     try:
         dev = evdev.InputDevice(node)
         for event in dev.read_loop():
             if event.type == evdev.ecodes.EV_KEY:
-                key_name = evdev.ecodes.BTN.get(event.code, str(event.code))
-                action = "PRESSED" if event.value == 1 else "RELEASED"
-                print(f"\r  [BUTTON] {key_name:<20} -> {action:<10}", end="", flush=True)
+                raw_name = evdev.ecodes.BTN.get(event.code, str(event.code))
+                if isinstance(raw_name, (list, tuple)):
+                    key_name = raw_name[0]
+                else:
+                    key_name = str(raw_name)
+                action = "PRESSED " if event.value == 1 else "RELEASED"
+                print(f"\r  [BUTTON] {key_name:<24} -> {action:<10}", end="", flush=True)
             elif event.type == evdev.ecodes.EV_ABS:
                 axis_name = evdev.ecodes.ABS.get(event.code, str(event.code))
-                print(f"\r  [AXIS]   {axis_name:<20} -> {event.value:<10}", end="", flush=True)
+                print(f"\r  [AXIS]   {axis_name:<24} -> {event.value:<10}", end="", flush=True)
     except KeyboardInterrupt:
-        print("\n\n✓ Test completed.")
+        print("\n\n✓ Input test completed.")
+        time.sleep(0.5)
+    except Exception as e:
+        print(f"\n❌ Error reading controller events: {e}", file=sys.stderr)
+        if sys.stdout.isatty():
+            input("\nPress Enter to exit...")
 
 def main():
     parser = argparse.ArgumentParser(description="Omarchy Controller Steward")
