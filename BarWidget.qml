@@ -40,7 +40,7 @@ BarIconButton {
         gamesService.refreshPlayspace()
       }
     } else {
-      Quickshell.execDetached("omarchy-menu", ["summon", "games"])
+      Quickshell.execDetached(["omarchy-menu", "summon", "games"])
     }
   }
 
@@ -288,7 +288,7 @@ BarIconButton {
             iconText: "󰍜"
             onClicked: {
               root.close()
-              Quickshell.execDetached("omarchy-menu", ["summon", "games"])
+              Quickshell.execDetached(["omarchy-menu", "summon", "games"])
             }
           }
         }

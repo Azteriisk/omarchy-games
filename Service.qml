@@ -55,16 +55,16 @@ Item {
   }
 
   function togglePlayspace() {
-    Quickshell.execDetached("bash", ["-c", root.scriptPath + " playspace toggle"])
+    Quickshell.execDetached(["bash", "-c", root.scriptPath + " playspace toggle"])
     refreshTimer.restart()
   }
 
   function testController() {
-    Quickshell.execDetached("omarchy-launch-tui", ["omarchy-games", "controller", "test"])
+    Quickshell.execDetached(["omarchy-launch-tui", "omarchy-games", "controller", "test"])
   }
 
   function fixController() {
-    Quickshell.execDetached("omarchy-launch-tui", ["omarchy-games", "controller", "fix"])
+    Quickshell.execDetached(["omarchy-launch-tui", "omarchy-games", "controller", "fix"])
     refreshTimer.restart()
   }
 
@@ -73,12 +73,12 @@ Item {
     if (target) {
       cmd += " " + JSON.stringify(target)
     }
-    Quickshell.execDetached("bash", ["-c", cmd])
+    Quickshell.execDetached(["bash", "-c", cmd])
   }
 
   function launch(gameNameOrId) {
     var cmd = scriptPath + " launch " + JSON.stringify(gameNameOrId)
-    Quickshell.execDetached("bash", ["-c", cmd])
+    Quickshell.execDetached(["bash", "-c", cmd])
   }
 
   Process {
