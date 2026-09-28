@@ -15,11 +15,15 @@ BarIconButton {
     root.popupOpen = false
   }
 
+  readonly property bool hideWhenDisconnected: setting("hideWhenDisconnected", true) === true
+
+  visible: !hideWhenDisconnected || (gamesService && (gamesService.controllerConnected || gamesService.playspaceActive || gamesService.isSyncing))
   active: (gamesService && gamesService.playspaceActive) || (gamesService && gamesService.isSyncing)
   text: "󰊴"
   tooltipText: (gamesService && gamesService.playspaceActive ? "🎮 Playspace ACTIVE (" + gamesService.playspaceTitle + ")\n" : "") +
                "Games Library (" + (gamesService ? gamesService.gameCount : 0) + " games)\n" +
-               "Controller: " + (gamesService && gamesService.controllerConnected ? gamesService.controllerName : "None") + "\n" +
+               "Controller: " + (gamesService && gamesService.controllerConnected ? (gamesService.controllerName + (gamesService.controllerSlot ? " [" + gamesService.controllerSlot + "]" : "")) : "None") + "\n" +
+               (gamesService && gamesService.tabletConflict ? "⚠️ Drawing tablet conflict detected!\n" : "") +
                "Left-click: Open Games Menu\nRight-click: Playspace & Controller Controls"
 
   onPressed: function(button) {
