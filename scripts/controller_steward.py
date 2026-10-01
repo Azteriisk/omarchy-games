@@ -216,7 +216,6 @@ def apply_fix():
     if os.geteuid() == 0:
         udev_target.write_text(udev_rule_content, encoding="utf-8")
         subprocess.run(["udevadm", "control", "--reload-rules"], check=False)
-        subprocess.run(["udevadm", "trigger", "-s", "input"], check=False)
         for js in Path("/dev/input").glob("js*"):
             try:
                 out = subprocess.check_output(["udevadm", "info", str(js)], text=True, errors="replace")
@@ -230,7 +229,7 @@ def apply_fix():
         cmd = (
             f"cp '{staging}' /etc/udev/rules.d/99-omarchy-tablet-no-joystick.rules && "
             "udevadm control --reload-rules && "
-            "udevadm trigger -s input && "
+
             "for js in /dev/input/js[0-9]*; do [ -e \"$js\" ] || continue; "
             "udevadm info \"$js\" 2>/dev/null | grep -Eq 'ID_VENDOR_ID=(256c|056a|28bd)' && rm -f \"$js\" || true; done"
         )
