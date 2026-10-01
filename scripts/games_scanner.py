@@ -277,7 +277,7 @@ def scan_steam(cfg):
                 aliases.extend(["cod", "bo2", "t6"])
 
             games.append({
-                "id": f"games.steam-{appid}",
+                "id": f"apps.games.steam-{appid}",
                 "label": name,
                 "icon": icon,
                 "has_real_icon": bool(real_icon),
@@ -329,7 +329,7 @@ def scan_lutris(cfg):
                     aliases.extend(["cod", "bo2", "black ops", "t6"])
 
                 games.append({
-                    "id": f"games.lutris-{slug}",
+                    "id": f"apps.games.lutris-{slug}",
                     "label": name,
                     "icon": icon,
                     "has_real_icon": bool(real_icon),
@@ -378,7 +378,7 @@ def scan_retroarch(cfg):
                         continue
 
                     slug = re.sub(r'[^a-zA-Z0-9]+', '-', label.lower()).strip("-")
-                    game_id = f"games.ra-{slug}"
+                    game_id = f"apps.games.ra-{slug}"
                     action = launch_wrapper.replace("{core_path}", core_path).replace("{rom_path}", rom_path)
                     desc = f"RetroArch · {core_name}" if show_source else core_name
 
@@ -424,7 +424,7 @@ def scan_custom(cfg):
             aliases.extend(item["aliases"])
 
         games.append({
-            "id": f"games.custom-{slug}",
+            "id": f"apps.games.custom-{slug}",
             "label": name,
             "icon": icon,
             "has_real_icon": icon.startswith("/") or icon.startswith("file://"),
@@ -447,7 +447,7 @@ def scan_xcloud(cfg):
 
     # Root hub entry
     games.append({
-        "id": "games.xcloud-hub",
+        "id": "apps.games.xcloud-hub",
         "label": "Xbox Cloud Gaming",
         "icon": xcloud_icon,
         "has_real_icon": False,
@@ -474,7 +474,7 @@ def scan_xcloud(cfg):
         id_slug = re.sub(r'[^a-zA-Z0-9]+', '-', name.lower()).strip("-")
 
         games.append({
-            "id": f"games.xcloud-{id_slug}",
+            "id": f"apps.games.xcloud-{id_slug}",
             "label": name,
             "icon": icon,
             "has_real_icon": icon.startswith("/") or icon.startswith("file://"),
@@ -507,13 +507,13 @@ def generate_games_jsonc_block(cfg, games):
 
     lines = []
     lines.append(f"  {BEGIN_MARKER}")
-    lines.append("  // Root Menu: Games folder (positioned directly under Apps)")
+    lines.append("  // Games folder under Apps")
     folder_obj = {
         "icon": folder_icon,
         "label": folder_label,
         "aliases": folder_aliases
     }
-    lines.append(f'  "games": {json.dumps(folder_obj, ensure_ascii=False)},')
+    lines.append(f'  "apps.games": {json.dumps(folder_obj, ensure_ascii=False)},')
     lines.append("")
 
     lines.append(f"  // Indexed games ({len(games)} found, with dynamic game artwork)")
@@ -536,7 +536,7 @@ def generate_games_jsonc_block(cfg, games):
             "aliases": ["rescan", "refresh", "sync-games"],
             "action": "omarchy-games sync && notify-send -i input-gaming 'Omarchy Games' 'Game library rescanned successfully!'"
         }
-        lines.append(f'  "games._rescan": {json.dumps(rescan_entry, ensure_ascii=False)},')
+        lines.append(f'  "apps.games._rescan": {json.dumps(rescan_entry, ensure_ascii=False)},')
 
     if show_config:
         config_entry = {
