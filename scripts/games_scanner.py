@@ -570,16 +570,12 @@ def update_user_menu(cfg, games):
         after = existing_content[existing_content.index(END_MARKER) + len(END_MARKER):].lstrip()
         new_content = before + "\n" + block + "\n" + after
     else:
-        last_brace = existing_content.rfind("}")
-        if last_brace != -1:
-            before = existing_content[:last_brace].rstrip()
-            non_empty_before = re.sub(r'//.*', '', before).strip()
-            if non_empty_before and non_empty_before != "{":
-                if not non_empty_before.endswith(","):
-                    before += "\n,"
-            new_content = before + "\n" + block + "\n" + existing_content[last_brace:]
-        else:
-            new_content = "{\n" + block + "\n}\n"
+        existing_content = re.sub(r"\}\s*$", "", existing_content).rstrip()
+        non_empty_before = re.sub(r'//.*', '', existing_content).strip()
+        if non_empty_before and non_empty_before != "{":
+            if not non_empty_before.endswith(","):
+                existing_content += "\n,"
+        new_content = existing_content + "\n" + block + "\n}\n"
 
     # Write file atomically
     tmp_path = USER_MENU_PATH.with_suffix(".jsonc.tmp")
